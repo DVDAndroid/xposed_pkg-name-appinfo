@@ -1,14 +1,17 @@
-package com.dvd.xposed.viewpackagename;
+package com.dvd.android.xposed.viewpackagename;
 
+import de.robv.android.xposed.IXposedHookLoadPackage;
+import de.robv.android.xposed.XC_MethodHook;
+import de.robv.android.xposed.XposedHelpers;
+import de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam;
+
+import android.content.ClipboardManager;
+import android.content.Context;
 import android.content.pm.PackageInfo;
 import android.content.res.Resources;
 import android.view.View;
 import android.widget.TextView;
-import de.robv.android.xposed.IXposedHookLoadPackage;
-import de.robv.android.xposed.XC_MethodHook;
-import de.robv.android.xposed.XSharedPreferences;
-import de.robv.android.xposed.XposedHelpers;
-import de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam;
+import android.widget.Toast;
 
 public class XposedMod implements IXposedHookLoadPackage {
 
@@ -25,10 +28,12 @@ public class XposedMod implements IXposedHookLoadPackage {
 					@Override
 					protected void afterHookedMethod(MethodHookParam param)
 							throws Throwable {
-						PackageInfo info = (PackageInfo) param.args[0];
+						final PackageInfo info = (PackageInfo) param.args[0];
 
 						View mRootView = (View) XposedHelpers.getObjectField(
 								param.thisObject, "mRootView");
+						final Context c = ((View) mRootView.getParent())
+								.getContext();
 
 						Resources res = mRootView.getResources();
 
@@ -42,17 +47,26 @@ public class XposedMod implements IXposedHookLoadPackage {
 
 						TextView label = (TextView) appSnippet
 								.findViewById(appVersionId);
+						label.setOnLongClickListener(new View.OnLongClickListener() {
+							@SuppressWarnings("deprecation")
+							@Override
+							public boolean onLongClick(View v) {
 
-						String name = label.getText().toString();
+								ClipboardManager clipboard = (ClipboardManager) c
+										.getSystemService(Context.CLIPBOARD_SERVICE);
+								clipboard.setText(info.packageName);
+								Toast.makeText(c,
+										"Package name copied in clipboard",
+										Toast.LENGTH_SHORT).show();
+								return false;
 
-						XSharedPreferences pref = new XSharedPreferences(
-								"com.dvd.xposed.viewpackagename", "pref");
+							}
+						});
 
-						if (pref.getBoolean("on", true)) {
-							label.setText(info.packageName + "\n" + name);
-						}
-
+						label.setText(info.packageName + "\n"
+								+ label.getText().toString());
 					}
+
 				});
 	}
 
